@@ -1,0 +1,28 @@
+// Access 'AdvisoriesKent redo' related table as a FeatureSet 
+// This needs to be done from the map because the map has filters preventing limited-data advisories etc from showing
+var relatedTable = FeatureSetByName($map, "AdvisoriesKent redo")
+
+// Define a common attribute, then create a filter statement based on that attribute
+// Want to get features where GUIDText from waterbodies table matches GUID in advisories table
+var commonAttr = $feature.GUIDText
+var filterStatement = 'GUID = @commonAttr'
+
+// Now, actually filter the data and assign it to a variable
+var relatedData = Filter(relatedTable, filterStatement)
+
+// Count the number of related records
+var relatedDataCount = Count(relatedData)
+
+// Create an empty pop-up string
+var popupString = ''
+
+// Depending on how many related records there are, show different text
+if (relatedDataCount > 1) {
+  popupString = "There are " + relatedDataCount + " advisories for this waterbody:"
+} else if (relatedDataCount == 1){
+  popupString = "There is " + relatedDataCount + " advisory for this waterbody:"
+} else {
+  popupString = "There are no advisories for this waterbody."
+}
+
+return popupString
