@@ -1,0 +1,29 @@
+// Access 'AdvisoriesKent redo' related table as a FeatureSet 
+// This needs to be done from the map because the map has filters preventing limited-data advisories etc from showing
+var relatedTable = FeatureSetByName($map, "AdvisoriesKent redo")
+
+// Define a common attribute, then create a filter statement based on that attribute
+// Want to get features where GUIDText from waterbodies table matches GUID in advisories table
+var commonAttr = $feature.GUIDText
+var filterStatement = 'GUID = @commonAttr'
+
+// Now, actually filter the data and assign it to a variable
+var relatedData = Filter(relatedTable, filterStatement)
+
+// Sort it alphabetically by species
+var relatedDataSorted = OrderBy(relatedData, 'Fish ASC')
+
+// Create an empty pop-up string
+var popupString = ''
+
+// Iterate through advisories
+for (var f in relatedDataSorted){
+    
+    popupString += f.Fish + "  -  " + f.Size + TextFormatting.NewLine +
+    
+        "MI Servings per Month: " + f.MI_Servings_per_month + TextFormatting.NewLine +
+        "Chemicals of Concern: " + f.Chemical_of_concern + TextFormatting.NewLine +
+        TextFormatting.NewLine
+}
+
+DefaultValue(popupString, 'There are no advisories for this body of water. Check the published guide.')
