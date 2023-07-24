@@ -1,3 +1,10 @@
+// There are two chunks of code here!
+// The first prints the species name if there are advisories for that species in the waterbody.
+// The second prints the advisories for the species.
+
+// SPECIES TITLE
+var species = "Largemouth Bass & Smallmouth Bass"
+
 // Access 'AdvisoriesKent redo' related table as a FeatureSet 
 // This should be done from the map in case there are filters that prevent some data from showing
 var relatedTable = FeatureSetByName($map, "AdvisoriesKent redo")
@@ -10,15 +17,50 @@ var filterStatement = 'GUID = @commonAttr'
 // Now, actually filter the data and assign it to a variable
 var relatedData = Filter(relatedTable, filterStatement)
 
-// Sort it alphabetically by species
-var relatedDataSorted = OrderBy(relatedData, 'Fish ASC')
+// Filter the related data to only the species that match
+var speciesFilterStatement = 'Fish = @species'
+var speciesFiltered = Filter(relatedData, speciesFilterStatement)
 
 // Create an empty pop-up string
 var popupString = ''
 
 // Iterate through advisories
-for (var f in relatedDataSorted){
+for (var f in speciesFiltered){
+    
+    popupString = TextFormatting.NewLine + f.Fish + TextFormatting.NewLine
+}
 
+DefaultValue(popupString, null)
+
+
+// SPECIES ADVISORIES
+var species = "Largemouth Bass & Smallmouth Bass"
+
+// Access 'AdvisoriesKent redo' related table as a FeatureSet 
+// This should be done from the map in case there are filters that prevent some data from showing
+var relatedTable = FeatureSetByName($map, "AdvisoriesKent redo")
+
+// Define a common attribute, then create a filter statement based on that attribute
+// Want to get features where GUID from waterbodies table matches GUID in advisories table
+var commonAttr = StandardizeGuid($feature.GUID, 'digits-hyphen-braces')
+var filterStatement = 'GUID = @commonAttr'
+
+// Now, actually filter the data and assign it to a variable
+var relatedData = Filter(relatedTable, filterStatement)
+
+// Filter the related data to only the species that match
+var speciesFilterStatement = 'Fish = @species'
+var speciesFiltered = Filter(relatedData, speciesFilterStatement)
+
+// Sort the filtered data alphabetically by size
+var speciesSorted = OrderBy(speciesFiltered, 'Size DESC')
+
+// Create an empty pop-up string
+var popupString = ''
+
+// Iterate through advisories
+for (var f in speciesSorted){
+    
     var serv = ''
 
     if(f.MI_Servings_per_month == "Limited"){
@@ -35,15 +77,13 @@ for (var f in relatedDataSorted){
 
     var canDouble = ''
 
-    if(f.Servings_double=="No"){
-        canDouble += "Do not double servings.";
+    if(f.Servings_double == "No"){
+        canDouble += "";
     } else {
         canDouble += "You can safely double the servings listed here by following the 3Cs.";
     } 
 
-    popupString += f.Fish + ",  " + f.Size + ":" + TextFormatting.NewLine +
-        serv + " due to " + f.Chemical_of_concern + ". " + canDouble + TextFormatting.NewLine +
-        TextFormatting.NewLine
+    popupString += "• " + f.Size + ": " + serv + " due to " + f.Chemical_of_concern + ". " + canDouble + TextFormatting.NewLine
 }
 
-DefaultValue(popupString, 'There are no advisories for this body of water. Check the published guides at michigan.gov/EatSafeFish.')
+DefaultValue(popupString, null)
