@@ -1,0 +1,48 @@
+// The species is the only value that needs to be changed
+var species = "Black Crappie & White Crappie"
+
+var relatedTable = FeatureSetByName($map, "Advisories", ['GUID', 'Fish'], False)
+
+// Define a common attribute, then create a filter statement based on that attribute
+// Want to get features where GUID from waterbodies table matches GUID in advisories table
+var commonAttr = StandardizeGuid($feature.GUID, 'digits-hyphen-braces')
+var filterStatement = 'GUID = @commonAttr'
+
+// Now, actually filter the data and assign it to a variable
+var relatedData = Filter(relatedTable, filterStatement)
+
+// Create an empty pop-up string
+var popupString = ''
+
+// If "All Species" or "All Other Species" values exist in relatedData, then I DON'T want to print the statewide guidelines
+var allSpecies = 0
+var allOtherSpecies = 0
+
+for (var i in relatedData){
+  if (i.Fish == "All Species"){
+    allSpecies ++
+  } else if (i.Fish == "All Other Species"){
+    allOtherSpecies ++
+  }
+}
+
+// Filter the related data to only the species that match
+var speciesFilterStatement = 'Fish = @species'
+var speciesFiltered = Filter(relatedData, speciesFilterStatement)
+
+var specificSpecies = 0
+
+for (var f in speciesFiltered){
+  specificSpecies ++
+  popupString = TextFormatting.NewLine + f.Fish + TextFormatting.NewLine
+}
+
+if (allSpecies == 0){
+  if (specificSpecies > 0){
+    DefaultValue(popupString, null)
+  } else if (specificSpecies == 0 && allOtherSpecies == 0){
+    DefaultValue(TextFormatting.NewLine + species + "*" + TextFormatting.NewLine, null)
+  } else {
+  DefaultValue(popupString, null)
+  }
+}

@@ -1,0 +1,37 @@
+// Access 'Advisories' related table as a FeatureSet 
+var relatedTable = FeatureSetByName($map, "Advisories", ['GUID', 'Fish'], False)
+
+// Define a common attribute, then create a filter statement based on that attribute
+// Want to get features where GUID from waterbodies table matches GUID in advisories table
+var commonAttr = StandardizeGuid($feature.GUID, 'digits-hyphen-braces')
+var filterStatement = 'GUID = @commonAttr'
+
+// Now, actually filter the data and assign it to a variable
+var relatedData = Filter(relatedTable, filterStatement)
+
+// Create an empty pop-up string
+var popupString = ''
+
+// If "All Species" or "All Other Species" values exist in relatedData, then I DON'T want to print the statewide guidelines asterisk
+var allSpecies = 0
+var allOtherSpecies = 0
+
+for (var i in relatedData){
+  if (i.Fish == "All Species"){
+    allSpecies ++
+  } else if (i.Fish == "All Other Species"){
+    allOtherSpecies ++
+  }
+}
+
+if ((allSpecies > 0 || allOtherSpecies > 0) && IsEmpty($feature.ESF_Footnote)==True){
+  popupString = TextFormatting.NewLine + "Do not refer to the Statewide Safe Fish Guidelines for this waterbody."
+} else if ((allSpecies > 0 || allOtherSpecies > 0) && IsEmpty($feature.ESF_Footnote)==False){
+  popupString = TextFormatting.NewLine + TextFormatting.NewLine + "Do not refer to the Statewide Safe Fish Guidelines for this waterbody."
+} else if ((allSpecies == 0 && allOtherSpecies == 0) && IsEmpty($feature.ESF_Footnote)==True){
+  popupString = TextFormatting.NewLine + "Species marked with an asterisk (*) have advisories from the Statewide Safe Fish Guidelines." +  TextFormatting.NewLine +  TextFormatting.NewLine + "All other species have advisories specific to this waterbody."
+} else if ((allSpecies == 0 && allOtherSpecies == 0) && IsEmpty($feature.ESF_Footnote)==False){
+  popupString = TextFormatting.NewLine + TextFormatting.NewLine + "Species marked with an asterisk (*) have advisories from the Statewide Safe Fish Guidelines." +  TextFormatting.NewLine +  TextFormatting.NewLine + "All other species have advisories specific to this waterbody."
+}
+
+DefaultValue(popupString, null)

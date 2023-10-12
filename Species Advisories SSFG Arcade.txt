@@ -1,0 +1,99 @@
+// The species and the statewide guidelines string (below) are the only values that need to be changed between species
+var species = "Black Crappie & White Crappie"
+ 
+var relatedTable = FeatureSetByName($map, "Advisories", ['GUID', 'Fish', 'Size', 'MI_Servings_Per_Month', 'Double_', 'Chemical_of_Concern'], False)
+
+// Define a common attribute, then create a filter statement based on that attribute
+// Want to get features where GUID from waterbodies table matches GUID in advisories table
+var commonAttr = StandardizeGuid($feature.GUID, 'digits-hyphen-braces')
+var filterStatement = 'GUID = @commonAttr'
+
+// Now, actually filter the data and assign it to a variable
+var relatedData = Filter(relatedTable, filterStatement)
+
+// Filter the related data to only the species that match
+var speciesFilterStatement = 'Fish = @species'
+var speciesFiltered = Filter(relatedData, speciesFilterStatement)
+  
+// Create a new feature set that has a field for the display order (some fish have 3 sizes that aren't sortable without creating a new field), and populate it
+var advisories = {
+    fields: [{name: 'DisplayOrder', type: 'esriFieldTypeString'}, {name: 'Size', type: 'esriFieldTypeString'}, {name: 'MI_Servings_Per_Month', type: 'esriFieldTypeString'}, {name: 'Double_', type: 'esriFieldTypeString'}, {name: 'Chemical_of_Concern', type: 'esriFieldTypeString'}], geometryType: '', features: []
+}
+
+for (var i in speciesFiltered){
+
+    var displayOrder = 0
+
+    if (Find("Under", i.Size) > -1){
+        displayOrder = 0
+    } else if(Find("Over", i.Size) > -1){
+        displayOrder = 2
+    } else {
+        displayOrder = 1
+    }
+
+    var temp_size = i.Size
+    var temp_serv = i.MI_Servings_Per_Month
+    var temp_dbl = i.Double_
+    var temp_chem = i.Chemical_of_Concern
+
+    Push(advisories['features'], {attributes: {DisplayOrder: displayOrder, Size: temp_size, MI_Servings_Per_Month: temp_serv, Double_: temp_dbl, Chemical_of_Concern: temp_chem}})
+}
+
+var fs_advisories = FeatureSet(Text(advisories))
+
+var speciesSorted = OrderBy(fs_advisories, 'DisplayOrder ASC')
+
+// Create an empty pop-up string
+var popupString = ''
+
+// Iterate through advisories
+for (var f in speciesSorted){
+
+  var size = ''
+
+  if (f.Size == "Any"){
+    size = "Any Size"
+  } else {
+    size = f.Size
+  }
+     
+  var serv = ''
+
+  if (f.MI_Servings_per_month == "Limited"){
+    serv = f.MI_Servings_per_month + " (†) servings per year"
+  } else if (f.MI_Servings_per_month == "Do Not Eat"){
+    serv = f.MI_Servings_per_month
+  } else if (f.MI_Servings_per_month == '6 Per Year'){
+    serv = "6 servings per year"
+  } else if (f.MI_Servings_per_month == '1'){
+    serv = f.MI_Servings_per_month + " serving per month"
+  } else {
+    serv = f.MI_Servings_per_month + " servings per month"
+  }
+
+  var chem = Replace(Replace(Replace(Replace(Replace(f.Chemical_of_Concern, "Dioxins", "dioxins"), "Mercury", "mercury"), "None", "no unsafe levels of chemicals of concern"), "Selenium", "selenium"), "Toxaphene", "toxaphene")
+
+  var canDouble = ''
+
+  if (f.Double_ == "Yes"){
+    canDouble = " (2x)"
+  }
+  
+  popupString += "• " + size + ": " + serv + canDouble + " due to " + chem + ". " + TextFormatting.NewLine
+}
+
+// If "All Species" or "All Other Species" values exist in relatedData, then I DON'T want to print the statewide guidelines
+var allSpecies = 0
+
+for (var i in relatedData){
+  if (i.Fish == "All Species" || i.Fish == "All Other Species"){
+    allSpecies ++
+  }
+}
+
+if (allSpecies == 0){
+  DefaultValue(popupString, "• Any Size: 4 servings per month due to mercury." + TextFormatting.NewLine)
+} else {
+  DefaultValue(popupString, null)
+}
