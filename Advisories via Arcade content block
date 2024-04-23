@@ -1,0 +1,329 @@
+// TABLE OF CONTENTS
+//    Styles
+//    Access related advisories
+//    Format waterbody name
+//    Create waterbody footnote (these are footnotes in the PDF guides, but displayed at the top in these pop-ups)
+//    Create DNE note
+//    Create Statewide Safe Fish Guidelines asterisk explanation
+//    Create size note
+//    Create advisories
+//    Create limited serving size and serving doubling notes
+//    Print everything
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// STYLES
+var green = '#175f5c'
+var yellow = '#ad5f1a'
+var lightYellow = '#fffdeb'
+var black = '#3c3c3c'
+
+var biggerText = '140%'
+var bigText = '115%'
+var normalText = '100%'
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// ACCESS RELATED ADVISORIES 
+var relatedTable = FeatureSetByName($map, "Advisories", ['GUID', 'Fish', 'Size', 'MI_Servings_Per_Month', 'Double_', 'Chemical_of_Concern'], False)
+
+var commonAttr = StandardizeGuid($feature.GUID, 'digits-hyphen-braces') // Want features where GUID from waterbodies matches GUID in advisories table
+var filterStatement = 'GUID = @commonAttr'
+var relatedData = Filter(relatedTable, filterStatement)
+
+// Create new fields for display order (some species have 3 sizes that aren't sortable alphabetically) and statewide guidelines, plus format some fields and push into a new fs
+var advisories = {fields: [
+    {name: 'Fish', type: 'esriFieldTypeString'},
+    {name: 'Size', type: 'esriFieldTypeString'},
+    {name: 'MI_Servings_Per_Month', type: 'esriFieldTypeString'},
+    {name: 'Double_', type: 'esriFieldTypeString'},
+    {name: 'Chemical_of_Concern', type: 'esriFieldTypeString'},
+    {name: 'DisplayOrder', type: 'esriFieldTypeString'}],
+    geometryType: '',
+    features: []
+}
+
+for (var i in relatedData){
+  
+  // FISH
+  var temp_fish = i.Fish
+
+  // SIZE
+  var temp_size = ''
+  When(i.Size == "Any", temp_size = "Any Size", temp_size = i.Size)
+
+  // SERVINGS PER MONTH
+  var temp_serv = ''
+  if(i.MI_Servings_Per_Month == "Limited"){
+    temp_serv = i.MI_Servings_Per_Month + " (†) servings per year"
+  } else if (i.MI_Servings_Per_Month == "Do Not Eat"){
+    temp_serv = "Do Not Eat"
+  } else if (i.MI_Servings_Per_Month == '6 Per Year'){
+    temp_serv = "6 servings per year"
+  } else if (i.MI_Servings_Per_Month == '1'){
+    temp_serv = i.MI_Servings_Per_Month + " serving per month"
+  } else {
+    temp_serv = i.MI_Servings_Per_Month + " servings per month"
+  }
+
+  // DOUBLE SERVINGS
+  var temp_dbl = ''
+  When(i.Double_ == "Yes", temp_dbl = " (2x)", temp_dbl = "")
+
+  // CHEMICALS OF CONCERN
+  var temp_chem = Replace(Replace(Replace(Replace(Replace(i.Chemical_of_Concern, "Dioxins", "dioxins"), "Mercury", "mercury"), "None", "no unsafe levels of chemicals of concern"), "Selenium", "selenium"), "Toxaphene", "toxaphene")
+
+  // DISPLAY ORDER
+  var displayOrder = 0
+  When((Find("Under", i.Size) > -1), displayOrder = 0, (Find("Over", i.Size) > -1), displayOrder = 2, displayOrder = 1)
+
+  // CREATE NEW FEATURESET
+  Push(advisories['features'], {attributes: {Fish: temp_fish, Size: temp_size, MI_Servings_Per_Month: temp_serv, Double_: temp_dbl, Chemical_of_Concern: temp_chem, DisplayOrder: displayOrder}})
+}
+
+// Make featureset text, filter, and order (sort)
+var fs_advisories = FeatureSet(Text(advisories))
+var displaySorted = OrderBy(fs_advisories, 'DisplayOrder ASC')
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// FORMAT WATERBODY NAME
+
+var wholeName = $feature.ESF_Group
+var charCount = Count(wholeName)
+var mainName = ''
+var subName = ''
+
+var startP = Find(" (", $feature.ESF_Group, 0)
+var aferStartP = Count($feature.ESF_Group) - startP
+
+if (charCount > 62 && Find(" (", $feature.ESF_Group) > -1){
+  mainName = Left($feature.ESF_Group, startP)
+  subName = Right($feature.ESF_Group, aferStartP)
+} else {
+  mainName = wholeName
+}
+
+var mainNameString = `<br><p style="font-size: ${biggerText}"><font color = ${black}><b>${mainName}</b></font></p>`
+var subNameString = `<p style="font-size: ${normalText}"><font color = ${black}>${subName}</font></p>`
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// CREATE WATERBODY FOOTNOTE
+var footNote = IIf(IsEmpty($feature.ESF_Footnote), null, `<b>` + $feature.ESF_Footnote + `</b>`)
+var footnoteSymbol = IIf(IsEmpty($feature.ESF_Footnote), null, "⚠ ")
+
+var footNoteString = `<p style="font-size: ${bigText}"><font color = ${green}>${footnoteSymbol}${footNote}</font></p>`
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// CREATE 'DO NOT EAT' WARNING (for waterbodies where you should not eat anything you catch)
+var dneWaterbody = IIF(IsEmpty($feature.AllDNE), null, `<b>` + "No one should eat fish from this waterbody, regardless of age or health." + `</b>`)
+var dneSymbol = IIF(IsEmpty($feature.AllDNE), null, "⚠ ")
+
+var dneWaterbodyString = `<p style="font-size: ${bigText}"><font color = ${yellow}>${dneSymbol}${dneWaterbody}</font></p>`
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// CREATE STATEWIDE SAFE FISH GUIDELINES ASTERISK EXPLANATION
+var allSpeciesCount = 0
+var allOtherSpeciesCount = 0
+
+for (var s in displaySorted){
+  if (s.Fish == "All Species"){
+    allSpeciesCount ++
+  } else if (s.Fish == "All Other Species"){
+    allOtherSpeciesCount ++
+  }
+}
+
+var ssfgNote =''
+
+if ((allSpeciesCount > 0 || allOtherSpeciesCount > 0) && $feature.AllDNE != "Yes" && $feature.DisplaySSFG != "No"){ // Waterbodies that are all DNE have a special warning
+  ssfgNote = `<p style="font-size: ${bigText}"><font color = ${yellow}>⚠ <b>Do not refer to the Statewide Safe Fish Guidelines for this waterbody.</b></font></p>`
+} else if ((allSpeciesCount == 0 && allOtherSpeciesCount == 0) && $feature.AllDNE != "Yes" && $feature.DisplaySSFG != "No"){
+  ssfgNote = `<p style="font-size: ${normalText}"><font color=${black}>Species marked with an asterisk (*) have advisories from the Statewide Safe Fish Guidelines.<br><br>All other species have advisories specific to this waterbody.</font></p>`
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// CREATE SIZE NOTE
+var sizeNoteString = `<p style="font-size: ${normalText}"><font color=${black}>All sizes are listed in inches.</font></p>`
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// CREATE ADVISORIES
+var popupString = ''
+var allOtherSpeciesString = ''
+
+// All unique species
+var speciesDistinct = Distinct(relatedTable, 'Fish')
+
+for (var k in speciesDistinct){
+
+  var speciesWaterbody = k.Fish
+
+  var speciesTitle = ''
+  var speciesAdvisories = ''
+  var allOtherSpeciesTitle = ''
+  var allOtherSpeciesAdvisories = ''
+
+  var waterbodySpeciesFilterStatement = 'Fish = @speciesWaterbody'
+  var waterbodySpeciesFiltered = Filter(displaySorted, waterbodySpeciesFilterStatement)
+
+  var speciesCount = 0
+
+  // Look at the advisories the waterbody has and check if the current species is among those advisories; if it is, print the species name as-is 
+  for (var g in waterbodySpeciesFiltered){
+    speciesCount ++
+
+    if (g.Fish != "All Other Species"){
+      speciesTitle = g.Fish
+    }
+  }
+
+  // If the waterbody doesn't have advisories for a species but we CAN show the SSFG, print the species name followed by an asterisk
+  if (speciesCount == 0 && allOtherSpeciesCount == 0 && allSpeciesCount == 0 && $feature.DisplaySSFG != "No"){
+    
+    if (k.Fish == "Black Crappie & White Crappie"){
+      speciesTitle = "Black Crappie & White Crappie*"
+    } else if (k.Fish == "Bluegill & Sunfish (aka Pumpkinseed)"){
+      speciesTitle = "Bluegill & Sunfish (aka Pumpkinseed)*"
+    } else if (k.Fish == "Brown Trout"){
+      speciesTitle = "Brown Trout*"
+    } else if (k.Fish == "Bullhead"){
+      speciesTitle = "Bullhead*"
+    } else if (k.Fish == "Carp"){
+      speciesTitle = "Carp*"
+    } else if (k.Fish == "Catfish"){
+      speciesTitle = "Catfish*"
+    } else if (k.Fish == "Largemouth Bass & Smallmouth Bass"){
+      speciesTitle = "Largemouth Bass & Smallmouth Bass*"
+    } else if (k.Fish == "Muskellunge"){
+      speciesTitle = "Muskellunge*"
+    } else if (k.Fish == "Northern Pike"){
+      speciesTitle = "Northern Pike*"
+    } else if (k.Fish == "Rock Bass"){
+      speciesTitle = "Rock Bass*"
+    } else if (k.Fish == "Suckers"){
+      speciesTitle = "Suckers*"
+    } else if (k.Fish == "Walleye"){
+      speciesTitle = "Walleye*"
+    } else if (k.Fish == "Yellow Perch"){
+      speciesTitle = "Yellow Perch*"
+    }
+  }
+
+  var speciesTitleString = `<span style="font-size: ${bigText}"><font color = ${green}><b>${speciesTitle}</b></font></span>`
+
+  // Create species advisories
+  for (var g in waterbodySpeciesFiltered){
+    if (g.Fish != "All Other Species"){
+      speciesAdvisories += `<li>` + g.Size + ": " + g.MI_Servings_Per_Month + g.Double_ + " due to " + g.Chemical_of_Concern + "." + `</li>`
+    }
+  }
+
+if (speciesCount == 0 && allOtherSpeciesCount == 0 && allSpeciesCount == 0 && $feature.DisplaySSFG != "No"){
+    if (k.Fish == "Black Crappie & White Crappie"){
+      speciesAdvisories = `<li>` + "Any Size: 4 servings per month due to mercury." + `</li>`
+    } else if (k.Fish == "Bluegill & Sunfish (aka Pumpkinseed)"){
+      speciesAdvisories = `<li>` + "Any Size: 8 servings per month due to mercury." + `</li>`
+    } else if (k.Fish == "Brown Trout"){
+      speciesAdvisories = `<li>` + "Any Size: 4 servings per month due to mercury." + `</li>`
+    } else if (k.Fish == "Bullhead"){
+      speciesAdvisories = `<li>` + "Any Size: 4 servings per month due to mercury." + `</li>`
+    } else if (k.Fish == "Carp"){
+      speciesAdvisories = `<li>` + "Any Size: 2 servings per month (2x) due to PCBs." + `</li>`
+    } else if (k.Fish == "Catfish"){
+      speciesAdvisories = `<li>` + "Any Size: 4 servings per month due to mercury and PCBs." + `</li>`
+    } else if (k.Fish == "Largemouth Bass & Smallmouth Bass"){
+      speciesAdvisories = `<li>` + "Under 18\": 2 servings per month due to mercury." + `</li><li>` + "Over 18\": 1 serving per month due to mercury." + `</li>`
+    } else if (k.Fish == "Muskellunge"){
+      speciesAdvisories = `<li>` + "Any Size: 1 serving per month due to mercury." + `</li>`
+    } else if (k.Fish == "Northern Pike"){
+      speciesAdvisories = `<li>` + "Under 30\": 2 servings per month due to mercury." + `</li><li>` + "Over 30\": 1 serving per month due to mercury." + `</li>`
+    } else if (k.Fish == "Rock Bass"){
+      speciesAdvisories = `<li>` + "Any Size: 4 servings per month due to mercury." + `</li>`
+    } else if (k.Fish == "Suckers"){
+      speciesAdvisories = `<li>` + "Any Size: 8 servings per month due to mercury." + `</li>`
+    } else if (k.Fish == "Walleye"){
+      speciesAdvisories = `<li>` + "Under 20\": 2 servings per month due to mercury." + `</li><li>` + "Over 20\": 1 serving per month due to mercury." + `</li>`
+    } else if (k.Fish == "Yellow Perch"){
+      speciesAdvisories = `<li>` + "Any Size: 4 servings per month due to mercury." + `</li>`
+    }
+  }
+
+  popupString += speciesTitleString + `<ul>` + speciesAdvisories + `</ul>`
+
+  var allOtherSpeciesFiltered = Filter(waterbodySpeciesFiltered, "Fish = 'All Other Species'")
+
+  for (var g in allOtherSpeciesFiltered){
+    allOtherSpeciesTitle = `<span style="font-size: ${bigText}"><font color = ${green}><b>All Other Species</b></font></span>`
+    allOtherSpeciesAdvisories += `<li>` + g.Size + ": " + g.MI_Servings_Per_Month + g.Double_ + " due to " + g.Chemical_of_Concern + "." + `</li>`
+  }
+
+  allOtherSpeciesString += allOtherSpeciesTitle + `<ul>` + allOtherSpeciesAdvisories + `</ul>`
+  
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// CREATE LIMITED SERVING SIZE AND SERVING DOUBLING NOTES
+
+var dblNote = ''
+var dblCount = 0
+var carpCount = 0
+
+for (var e in relatedData){
+  if (e.Double_ == "Yes"){
+    dblCount++
+  }
+}
+
+if ($feature.DisplaySSFG != "No" && $feature.AllDNE != "Yes"){ // check if statewide safe fish guidelines are showing
+  for (var c in relatedData){
+    if (c.Fish == "Carp"){
+      carpCount++
+    }
+  }
+
+  if (carpCount == 0 && allOtherSpeciesCount == 0){
+    dblCount++
+  }
+}
+
+if (dblCount > 0){
+  dblNote = `<b>(2x): </b> See \"Get to Know the 3Cs\"`
+}
+
+//
+
+var limitedNote = ''
+var limitedCount = 0
+
+for (var e in relatedData){
+  if (e.MI_Servings_Per_Month == "Limited"){
+    limitedCount++
+  }
+}
+
+if (limitedCount > 0){
+  limitedNote = `<b>Limited (†): </b> See \"Special MI Serving Categories\"`
+}
+
+var highlight = ''
+
+if (IsEmpty(dblNote) == true && IsEmpty(limitedNote) == false){
+  highlight = `<p style="font-size: ${normalText}; background-color: ${lightYellow}"><font color=${black}>${limitedNote}</font></p>`
+} else if (IsEmpty(dblNote) == false && IsEmpty(limitedNote) == true){
+  highlight = `<p style="font-size: ${normalText}; background-color: ${lightYellow}"><font color=${black}>${dblNote}</font></p>`
+} else if (IsEmpty(dblNote) == false && IsEmpty(limitedNote) == false){
+  highlight = `<p style="font-size: ${normalText}; background-color: ${lightYellow}"><font color=${black}>${dblNote}<br>${limitedNote}</font></p>`
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+return { 
+	type : 'text',
+	text : mainNameString + subNameString + footNoteString + dneWaterbodyString + ssfgNote + sizeNoteString + `<hr>` + popupString + allOtherSpeciesString + `</hr>` + highlight
+};
