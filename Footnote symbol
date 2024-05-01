@@ -1,0 +1,1 @@
+IIf(IsEmpty($feature.ESF_Footnote), null, TextFormatting.NewLine + "⚠ ")
