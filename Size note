@@ -1,0 +1,9 @@
+var sizeNote = ''
+
+if ($feature.AllDNE != "Yes" && $feature.DisplaySSFG == "No"){
+  sizeNote = TextFormatting.NewLine + 'All sizes are listed in inches.' + TextFormatting.NewLine
+} else if ($feature.DisplaySSFG != "No"){
+  sizeNote = TextFormatting.NewLine + TextFormatting.NewLine + 'All sizes are listed in inches.' + TextFormatting.NewLine
+}
+
+DefaultValue(sizeNote, TextFormatting.NewLine)
