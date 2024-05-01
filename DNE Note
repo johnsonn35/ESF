@@ -1,0 +1,7 @@
+var popupString = ''
+
+if($feature.AllDNE == "Yes"){
+  popupString = "No one should eat fish from this waterbody, regardless of age or health."
+}
+
+DefaultValue(popupString, null)
