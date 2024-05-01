@@ -92,7 +92,7 @@ for (var i in relatedData){
   }
 }
 
-if (allSpecies == 0){
+if (allSpecies == 0 && $feature.DisplaySSFG != "No"){
   DefaultValue(popupString, "• Any Size: 4 servings per month due to mercury." + TextFormatting.NewLine)
 } else {
   DefaultValue(popupString, null)
