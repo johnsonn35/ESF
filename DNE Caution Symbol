@@ -1,0 +1,9 @@
+var popupString = ''
+
+if($feature.AllDNE == "Yes" && IsEmpty($feature.ESF_Footnote) == true){
+  popupString = TextFormatting.NewLine + "⚠ "
+} else if($feature.AllDNE == "Yes" && IsEmpty($feature.ESF_Footnote) == false){
+  popupString = TextFormatting.NewLine + TextFormatting.NewLine + "⚠ "
+}
+
+DefaultValue(popupString, null)
