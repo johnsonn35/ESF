@@ -1,0 +1,26 @@
+// Access 'Advisories' related table as a FeatureSet 
+var relatedTable = FeatureSetByName($map, "Advisories", ['GUID', 'Chemical_of_Concern'], False)
+
+// Define a common attribute, then create a filter statement based on that attribute
+// Want to get features where GUID from waterbodies table matches GUID in advisories table
+var commonAttr = StandardizeGuid($feature.GUID, 'digits-hyphen-braces')
+var filterStatement = 'GUID = @commonAttr'
+
+// Now, actually filter the data and assign it to a variable
+var relatedData = Filter(relatedTable, filterStatement)
+
+// Create an empty pop-up string
+var popupString = ''
+
+// If selenium appears as a chemical of concern, want to print a warning
+var seleniumCount = 0
+
+for (var i in relatedData){
+  When((Find("Selenium", i.Chemical_of_Concern) > -1), seleniumCount++, seleniumCount = seleniumCount)
+}
+
+if (seleniumCount > 0 && $feature.AllDNE != "Yes"){
+  popupString = TextFormatting.NewLine + "⚠ "
+}
+
+DefaultValue(popupString, null)
