@@ -1,0 +1,14 @@
+var wholeName = $feature.ESF_Group
+//var charCount = Count(wholeName)
+var mainName = ''
+
+var startP = Find(" (", $feature.ESF_Group, 0)
+//var aferStartP = Count($feature.ESF_Group) - startP
+
+if (Find(" (", $feature.ESF_Group) > -1){ // removed "if charCount > 62 && ""
+  mainName = Left($feature.ESF_Group, startP)
+} else {
+  mainName = wholeName
+}
+
+return mainName
