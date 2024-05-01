@@ -40,7 +40,7 @@ for (var f in speciesFiltered){
 if (allSpecies == 0){
   if (specificSpecies > 0){
     DefaultValue(popupString, null)
-  } else if (specificSpecies == 0 && allOtherSpecies == 0){
+  } else if (specificSpecies == 0 && allOtherSpecies == 0 && $feature.DisplaySSFG != "No"){
     DefaultValue(TextFormatting.NewLine + species + "*" + TextFormatting.NewLine, null)
   } else {
   DefaultValue(popupString, null)
