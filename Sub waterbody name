@@ -1,0 +1,16 @@
+//var wholeName = $feature.ESF_Group
+//var charCount = Count(wholeName)
+var subName = ''
+
+var startP = Find(" (", $feature.ESF_Group, 0)
+var aferStartP = Count($feature.ESF_Group) - startP
+
+if (Find(" (", $feature.ESF_Group) > -1){ // removed "if charCount > 62 && "
+  subName = Right($feature.ESF_Group, aferStartP)
+}
+
+if(IsEmpty(subName) == True){
+  return TextFormatting.NewLine
+} else {
+  return TextFormatting.NewLine + subName + TextFormatting.NewLine
+}
