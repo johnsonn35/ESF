@@ -24,14 +24,8 @@ for (var i in relatedData){
   }
 }
 
-if ((allSpecies > 0 || allOtherSpecies > 0) && IsEmpty($feature.ESF_Footnote)==True){
-  popupString = TextFormatting.NewLine + "Do not refer to the Statewide Safe Fish Guidelines for this waterbody."
-} else if ((allSpecies > 0 || allOtherSpecies > 0) && IsEmpty($feature.ESF_Footnote)==False){
-  popupString = TextFormatting.NewLine + TextFormatting.NewLine + "Do not refer to the Statewide Safe Fish Guidelines for this waterbody."
-} else if ((allSpecies == 0 && allOtherSpecies == 0) && IsEmpty($feature.ESF_Footnote)==True){
+if ((allSpecies == 0 && allOtherSpecies == 0) && $feature.AllDNE != "Yes" && $feature.DisplaySSFG != "No"){
   popupString = TextFormatting.NewLine + "Species marked with an asterisk (*) have advisories from the Statewide Safe Fish Guidelines." +  TextFormatting.NewLine +  TextFormatting.NewLine + "All other species have advisories specific to this waterbody."
-} else if ((allSpecies == 0 && allOtherSpecies == 0) && IsEmpty($feature.ESF_Footnote)==False){
-  popupString = TextFormatting.NewLine + TextFormatting.NewLine + "Species marked with an asterisk (*) have advisories from the Statewide Safe Fish Guidelines." +  TextFormatting.NewLine +  TextFormatting.NewLine + "All other species have advisories specific to this waterbody."
 }
 
 DefaultValue(popupString, null)
