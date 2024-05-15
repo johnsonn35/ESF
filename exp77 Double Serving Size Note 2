@@ -41,5 +41,5 @@ if ($feature.DisplaySSFG != "No" && $feature.AllDNE != "Yes"){
 }
 
 if (dblCount > 0){
-    DefaultValue('See "Get to Know the 3Cs"', null)
+    DefaultValue("Get to Know the 3Cs", null)
 }
