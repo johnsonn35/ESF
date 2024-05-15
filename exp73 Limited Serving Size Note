@@ -19,5 +19,5 @@ for (var f in relatedData){
 }
 
 if (limitedCount > 0){
-    DefaultValue(TextFormatting.NewLine + 'Limited (†):', null)
+    DefaultValue(TextFormatting.NewLine + 'Limited (†): See ', null)
 }
