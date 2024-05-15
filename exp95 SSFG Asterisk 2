@@ -25,7 +25,7 @@ for (var i in relatedData){
 }
 
 if ((allSpecies == 0 && allOtherSpecies == 0) && $feature.AllDNE != "Yes" && $feature.DisplaySSFG != "No"){
-  popupString = ". All other species have advisories specific to this waterbody."
+  popupString = "." + TextFormatting.NewLine + TextFormatting.NewLine + "All other species have advisories specific to this waterbody."
 }
 
 DefaultValue(popupString, null)
