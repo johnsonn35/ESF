@@ -19,5 +19,5 @@ for (var f in relatedData){
 }
 
 if (limitedCount > 0){
-  DefaultValue('See "Special MI Serving Categories"', null)
+  DefaultValue("Special MI Serving Categories", null)
 }
