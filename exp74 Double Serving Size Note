@@ -41,5 +41,5 @@ if ($feature.DisplaySSFG != "No" && $feature.AllDNE != "Yes"){
 }
 
 if (dblCount > 0){
-  DefaultValue(TextFormatting.NewLine + '(2x):', null)
+  DefaultValue(TextFormatting.NewLine + '(2x): See', null)
 }
