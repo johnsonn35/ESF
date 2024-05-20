@@ -1,1 +1,1 @@
-IIf($feature.AllDNE != "Yes", TextFormatting.NewLine + TextFormatting.NewLine + "Find Your MI Serving Size", null)
+IIf($feature.AllDNE != "Yes", "MI Serving Size", null)
